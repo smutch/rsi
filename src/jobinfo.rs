@@ -13,11 +13,17 @@ use terminal_size::terminal_size;
 
 
 #[derive(Args)]
+/// Command line arguments for the jobinfo subcommand
 pub struct JobInfo {
     #[clap(short, long, value_parser)]
     pub jobid: u32,
 }
 
+/// Print the output from `sacct -plj <jobid>` in a nice (actually readable!) format.
+/// 
+/// # Arguments
+///
+/// * `jobid` - The SLURM jobid to request info for from `saccct`
 pub fn jobinfo(jobid: u32) -> Result<()> {
     debug!("jobid = {}", jobid);
 

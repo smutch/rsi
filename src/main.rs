@@ -6,12 +6,14 @@ mod jobinfo;
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
 #[clap(propagate_version = true)]
+/// Top-level command line arguments for `rsi`
 struct Cli {
     #[clap(subcommand)]
     command: Commands,
 }
 
 #[derive(Subcommand)]
+/// Register subcommands (currently just `jobinfo`)
 enum Commands {
     #[clap(name = "jobinfo")]
     JobInfo(jobinfo::JobInfo),

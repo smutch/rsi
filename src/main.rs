@@ -1,29 +1,45 @@
 use std::process::Command;
 
-use clap::Parser;
-use eyre::{eyre, Result};
+use clap::{Args, Parser, Subcommand};
+use console::style;
+use eyre::{eyre, Result, Context};
 use log::debug;
 use tabled::{
-    object::{Rows, Columns},
+    object::{Columns, Rows},
     width::{Max, MinWidth},
-    Disable, Modify, Width, Format,
+    Disable, Format, Modify, Width,
 };
 use terminal_size::terminal_size;
-use console::style;
 
 #[derive(Parser)]
+#[clap(author, version, about, long_about = None)]
+#[clap(propagate_version = true)]
 struct Cli {
-    #[clap(short, long)]
+    #[clap(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    #[clap(name="jobinfo")]
+    JobInfo(JobInfo),
+}
+
+#[derive(Args)]
+struct JobInfo {
+    #[clap(short, long, value_parser)]
     jobid: u32,
 }
 
-fn main() -> Result<()> {
-    env_logger::init();
+fn jobinfo(jobid: u32) -> Result<()> {
+    debug!("Running jobinfo subcommand");
+    debug!("jobid = {}", jobid);
 
-    let args = Cli::parse();
-    debug!("jobid = {}", args.jobid);
-
-    let output = Command::new("cat").arg("tmp.txt").output()?;
+    let output = Command::new("sacct")
+        .arg("-plj")
+        .arg(format!("{}", jobid))
+        .arg("--delimiter='|'")
+        .output().context("Failed to run 'sacct' command")?;
     if !output.status.success() {
         return Err(eyre!("Command failed!"));
     }
@@ -33,22 +49,22 @@ fn main() -> Result<()> {
     let mut table_builder = tabled::builder::Builder::default();
     for row in stdout
         .lines()
-        .enumerate()
-        .filter(|&(ii, _)| ii != 1)
-        .map(|(_, v)| v)
-    {
-        // TODO: There must be a better way to do this than creating a vec and popping! (peekable?)
-        let mut cols: Vec<_> = row.split('|').collect();
-        cols.pop();
-        table_builder.add_record(cols);
-    }
+            .enumerate()
+            .filter(|&(ii, _)| ii != 1)
+            .map(|(_, v)| v)
+            {
+                // TODO: There must be a better way to do this than creating a vec and popping! (peekable?)
+                let mut cols: Vec<_> = row.split('|').collect();
+                cols.pop();
+                table_builder.add_record(cols);
+            }
     let mut table_builder = table_builder.index();
     table_builder.transpose().hide_index();
     let table = table_builder.build();
     let width: usize = terminal_size()
         .ok_or(eyre!("Failed to get current terminal width"))?
         .0
-         .0
+        .0
         .into();
     debug!("Term width = {width}");
 
@@ -62,4 +78,17 @@ fn main() -> Result<()> {
     println!("{table}");
 
     Ok(())
+}
+
+fn main() -> Result<()> {
+    env_logger::init();
+
+    let cmd = Cli::parse();
+
+    match &cmd.command {
+        Commands::JobInfo(args) => {
+            jobinfo(args.jobid)
+        }
+    }
+
 }

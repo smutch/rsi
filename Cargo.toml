@@ -12,3 +12,4 @@ eyre = "0.6.8"
 log = "0.4.17"
 tabled = { version = "0.8.0", features = ["color"] }
 terminal_size = "0.2.1"
+console = "0.15"

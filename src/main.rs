@@ -4,11 +4,12 @@ use clap::Parser;
 use eyre::{eyre, Result};
 use log::debug;
 use tabled::{
-    object::Rows,
+    object::{Rows, Columns},
     width::{Max, MinWidth},
-    Disable, Modify, Width,
+    Disable, Modify, Width, Format,
 };
 use terminal_size::terminal_size;
+use console::style;
 
 #[derive(Parser)]
 struct Cli {
@@ -52,9 +53,11 @@ fn main() -> Result<()> {
     debug!("Term width = {width}");
 
     let table = table
+        .with(Disable::Row(0..1))
+        .with(tabled::style::Style::psql())
         .with(Modify::new(Rows::first()).with(MinWidth::new(Max)))
-        .with(Width::truncate(width))
-        .with(Disable::Row(0..1));
+        .with(Width::wrap(width).keep_words())
+        .with(Modify::new(Columns::single(0)).with(Format::new(|s| style(s).yellow().to_string())));
 
     println!("{table}");
 

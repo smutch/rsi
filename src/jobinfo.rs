@@ -30,13 +30,14 @@ pub fn jobinfo(jobid: u32) -> Result<()> {
     let output = Command::new("sacct")
         .arg("-plj")
         .arg(format!("{}", jobid))
-        .arg("--delimiter='|'")
+        .arg("--delimiter=|")
         .output().context("Failed to run 'sacct' command")?;
     if !output.status.success() {
         return Err(eyre!("Command failed!"));
     }
 
     let stdout = String::from_utf8(output.stdout)?;
+    debug!("{stdout}");
 
     let mut table_builder = tabled::builder::Builder::default();
     for row in stdout

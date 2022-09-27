@@ -6,7 +6,7 @@ use eyre::{eyre, Context, Result};
 use log::debug;
 use tabled::{
     object::{Columns, Rows},
-    width::{Min, MinWidth},
+    width::{Min, MinWidth, Max, PriorityMax},
     Disable, Format, Modify, Width,
 };
 use terminal_size::terminal_size;
@@ -75,6 +75,9 @@ pub fn jobinfo(jobid: u32) -> Result<()> {
         // table_builder.add_record(cols);
     }
 
+    let max_name_len = rows.first().unwrap().iter().map(|v| v.len()).max().unwrap();
+    debug!("max_name_len = {max_name_len}");
+
     // find which col stores JobID
     let jobid_col = rows
         .first()
@@ -86,6 +89,7 @@ pub fn jobinfo(jobid: u32) -> Result<()> {
         .first()
         .unwrap()
         .0;
+
 
     // sort by the jobid
     rows[1..].sort_by(|a, b| {
@@ -100,10 +104,11 @@ pub fn jobinfo(jobid: u32) -> Result<()> {
         // be in alphabetocal order
         row.swap(0, jobid_col);
         let jobid = row.remove(jobid_col);
-        row.insert(0, jobid);
+        row.insert(1, jobid);
 
         table_builder.add_record(row);
     }
+
 
     let mut table_builder = table_builder.index();
     table_builder.transpose().hide_index();
@@ -111,16 +116,15 @@ pub fn jobinfo(jobid: u32) -> Result<()> {
     let width: usize = terminal_size()
         .ok_or(eyre!("Failed to get current terminal width"))?
         .0
-         .0
+        .0
         .into();
     debug!("Term width = {width}");
 
     let table = table
         .with(Disable::Row(0..1))
         .with(tabled::style::Style::psql())
-        .with(Modify::new(Rows::first()).with(MinWidth::new(Min)))
-        .with(Width::wrap(width).keep_words())
-        .with(Modify::new(Columns::single(0)).with(Format::new(|s| style(s).yellow().to_string())));
+        .with(Modify::new(Columns::single(0)).with(Format::new(|s| style(s).yellow().to_string())).with(Width::increase(max_name_len)))
+        .with(Modify::new(Columns::new(1..)).with(Width::wrap((width - max_name_len - 12) / 3).keep_words()));
 
     println!("{table}");
 

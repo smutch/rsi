@@ -7,9 +7,7 @@ use console::style;
 use eyre::{eyre, Context, Result};
 use log::debug;
 use tabled::{
-    object::{Columns, Rows, Cell},
-    width::{Max, Min, MinWidth, PriorityMax},
-    Disable, Format, Modify, Width,
+    object::{Columns, Cell}, Format, Modify, Width,
 };
 use terminal_size::terminal_size;
 

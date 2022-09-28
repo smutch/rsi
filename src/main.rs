@@ -25,6 +25,6 @@ fn main() -> Result<()> {
     let cmd = Cli::parse();
 
     match &cmd.command {
-        Commands::JobInfo(args) => jobinfo::jobinfo(args.jobid),
+        Commands::JobInfo(args) => jobinfo::jobinfo(args.jobid, &args.step),
     }
 }

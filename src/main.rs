@@ -2,6 +2,7 @@ use clap::{Parser, Subcommand};
 use eyre::Result;
 
 mod jobinfo;
+mod starttime;
 
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]

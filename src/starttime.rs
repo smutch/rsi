@@ -6,7 +6,15 @@ use eyre::Result;
 ///
 /// * `script` - The path to a batch submission script with `#SBATCH ...` arguments
 fn parse_script(script: &Path) -> Result<Vec<String>> {
-    unimplemented!()
+    let content = std::fs::read_to_string(script)?;
+    let mut result: Vec<String> = Vec::new();
+    for line in content.lines() {
+        let line = line.trim();
+        if line.starts_with("#SBATCH") {
+            result.extend(line.split_whitespace().skip(1).map(|s| s.to_string()));
+        }
+    }
+    Ok(result)
 }
 
 /// Extract job submission parameters from a batch script and use that to estimate the start time

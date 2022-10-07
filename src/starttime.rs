@@ -39,8 +39,8 @@ pub fn starttime(script: &Path) -> Result<()> {
         return Err(eyre!("Command failed!"));
     }
 
-    let stdout = String::from_utf8(output.stdout)?;
-    println!("{stdout}");
+    let stderr = String::from_utf8(output.stderr)?;
+    println!("{stderr}");
 
     Ok(())
 }

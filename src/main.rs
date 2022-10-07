@@ -18,6 +18,8 @@ struct Cli {
 enum Commands {
     #[clap(name = "jobinfo")]
     JobInfo(jobinfo::JobInfo),
+    #[clap(name = "starttime")]
+    StartTime(starttime::StartTime),
 }
 
 fn main() -> Result<()> {
@@ -27,5 +29,6 @@ fn main() -> Result<()> {
 
     match &cmd.command {
         Commands::JobInfo(args) => jobinfo::jobinfo(args.jobid, &args.step),
+        Commands::StartTime(args) => starttime::starttime(&args.script),
     }
 }

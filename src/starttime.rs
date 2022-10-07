@@ -1,5 +1,6 @@
-use std::path::Path;
-use eyre::Result;
+use clap::Args;
+use std::{path::{Path, PathBuf}, process::Command};
+use eyre::{eyre, Result, Context};
 
 /// Parse a job submission script and return the sbatch arguments
 /// # Arguments
@@ -17,6 +18,13 @@ fn parse_script(script: &Path) -> Result<Vec<String>> {
     Ok(result)
 }
 
+#[derive(Args)]
+/// Command line arguments for the jobinfo subcommand
+pub struct StartTime {
+    #[clap(value_parser)]
+    pub script: PathBuf
+}
+
 /// Extract job submission parameters from a batch script and use that to estimate the start time
 /// of the job.
 ///
@@ -24,7 +32,17 @@ fn parse_script(script: &Path) -> Result<Vec<String>> {
 ///
 /// * `script` - The path to a batch submission script with `#SBATCH ...` arguments
 pub fn starttime(script: &Path) -> Result<()> {
-    unimplemented!()
+    let mut args = parse_script(script)?;
+    args.extend(vec!("--test-only".to_string(), "--wrap".to_string(), "\"hostname\"".to_string()));
+    let output = Command::new("sbatch").args(args).output().context("Failed to run 'sbatch' command")?;
+    if !output.status.success() {
+        return Err(eyre!("Command failed!"));
+    }
+
+    let stdout = String::from_utf8(output.stdout)?;
+    println!("{stdout}");
+
+    Ok(())
 }
 
 

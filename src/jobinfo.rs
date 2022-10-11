@@ -7,7 +7,8 @@ use console::style;
 use eyre::{eyre, Context, Result};
 use log::debug;
 use tabled::{
-    object::{Columns, Cell}, Format, Modify, Width,
+    object::{Cell, Columns},
+    Format, Modify, Width,
 };
 use terminal_size::terminal_size;
 
@@ -16,7 +17,7 @@ use terminal_size::terminal_size;
 pub struct JobInfo {
     #[clap(value_parser)]
     pub jobid: u32,
-    #[clap(short, long, default_value="0")]
+    #[clap(short, long, default_value = "0")]
     pub step: String,
 }
 
@@ -27,8 +28,9 @@ pub struct JobInfo {
 /// * `jobid` - The SLURM jobid to request info for from `saccct`
 /// * `step` - The step to request info for from `saccct` (e.g. "batch", "0", ...)
 pub fn jobinfo(jobid: u32, step: &str) -> Result<()> {
-    let full_jobid = format!("{jobid}.{step}");
+    let mut full_jobid = format!("{jobid}.{step}");
     debug!("full_jobid = {}", full_jobid);
+    let jobid_str = format!("{jobid}");
 
     let output = Command::new("sacct")
         .arg("-e")
@@ -47,26 +49,41 @@ pub fn jobinfo(jobid: u32, step: &str) -> Result<()> {
         .collect::<Vec<_>>()
         .join(",");
 
+    // Get all the steps so we can check for our requested one and adjust accordingly if not present...
     let output = Command::new("sacct")
         .arg("-o")
         .arg(columns)
         .arg("--delimiter=|")
         .arg("-pj")
-        .arg(full_jobid)
+        .arg(&jobid_str)
         .output()
         .context("Failed to run 'sacct' command")?;
     if !output.status.success() {
         return Err(eyre!("Command failed!"));
     }
 
-    let stdout = String::from_utf8(output.stdout)?;
+    let raw_stdout = String::from_utf8(output.stdout)?;
+
+    // If our requested step isn't present then report the batch step
+    if raw_stdout
+        .lines()
+        .filter(|line| line.starts_with(&full_jobid))
+        .count()
+        == 0
+    {
+        full_jobid = format!("{jobid}.batch");
+    }
+
+    let stdout = String::from_iter(
+        raw_stdout
+            .lines()
+            .filter(|line| !line.starts_with(&jobid_str) || line.starts_with(&full_jobid)),
+    );
     debug!("...\n{stdout}");
 
     let mut table_builder = tabled::builder::Builder::default();
 
-    for row in stdout
-        .lines()
-    {
+    for row in stdout.lines() {
         // TODO: There must be a better way to do this than creating a vec and popping! (peekable?)
         let mut cols: Vec<_> = row.split('|').collect();
         cols.pop();
@@ -88,11 +105,8 @@ pub fn jobinfo(jobid: u32, step: &str) -> Result<()> {
     let table = table
         .with(tabled::style::Style::psql())
         .with(Modify::new(Cell(0, 1)).with(|_: &str| format!("JOBID={jobid} STEP={step}")))
-        .with(Modify::new(Columns::new(1..)).with(Width::wrap(width-25).keep_words()))
-        .with(
-            Modify::new(Columns::single(0))
-                .with(Format::new(|s| style(s).yellow().to_string()))
-        );
+        .with(Modify::new(Columns::new(1..)).with(Width::wrap(width - 25).keep_words()))
+        .with(Modify::new(Columns::single(0)).with(Format::new(|s| style(s).yellow().to_string())));
 
     println!("{table}");
 
